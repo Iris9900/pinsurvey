@@ -1,0 +1,685 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>群体行为记录</title>
+<style>
+:root{--bg:#0d0d0f;--card:#1c1c1e;--card2:#2c2c2e;--line:#38383a;
+  --fg:#fff;--muted:#8e8e93;--accent:#0a84ff;--ok:#30d158;--danger:#ff453a;
+  --group:#5e5ce6;}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;background:var(--bg);color:var(--fg);
+  font:16px/1.35 -apple-system,system-ui,"PingFang SC",sans-serif;
+  overscroll-behavior:none}
+body{padding:0 10px 130px}
+
+.bar{position:sticky;top:0;z-index:10;background:rgba(13,13,15,.96);
+  backdrop-filter:blur(10px);padding:8px 10px;display:flex;gap:6px;
+  align-items:center;flex-wrap:wrap;border-bottom:1px solid var(--line);
+  margin:0 -10px 10px}
+.pill{background:var(--card);border:1px solid var(--line);border-radius:20px;
+  padding:6px 12px;font-size:13px;color:var(--muted);white-space:nowrap;cursor:pointer}
+.pill b{color:var(--fg)}
+.pill:active{background:var(--card2)}
+
+/* 群组框 */
+.group-box{background:linear-gradient(135deg,#1a1a35,#161b3e);
+  border:1px solid #2a3a6a;border-radius:14px;padding:10px 12px;
+  margin-bottom:12px}
+.group-head{display:flex;align-items:center;justify-content:space-between;
+  font-size:12px;color:#8ab4f8;margin-bottom:8px;
+  text-transform:uppercase;letter-spacing:.08em;font-weight:600}
+.group-head .cnt{color:var(--fg);font-weight:700;font-size:14px;
+  text-transform:none;letter-spacing:0;margin-left:4px}
+.mini-btn{background:var(--group);border:0;color:#fff;font-size:12px;
+  font-weight:600;padding:6px 12px;border-radius:16px;cursor:pointer}
+.mini-btn:active{transform:scale(.95)}
+.mini-btn.alt{background:#2c2c3e;color:#c8c8cc;border:1px solid #3a3a4e}
+
+/* 个人框 */
+.person-box{background:var(--card);border-radius:14px;padding:10px 12px;
+  margin-bottom:12px}
+
+/* 字段行 */
+.field-row{display:flex;align-items:flex-start;gap:8px;margin-bottom:8px}
+.field-row > label{flex:0 0 42px;font-size:13px;color:var(--muted);
+  padding-top:11px;font-weight:600}
+.field-row > .row{flex:1;min-width:0}
+
+.row{display:flex;flex-wrap:wrap;gap:6px}
+.chip{background:var(--card2);border:1px solid var(--line);color:var(--fg);
+  border-radius:10px;padding:9px 13px;font-size:15px;cursor:pointer;
+  user-select:none;min-height:40px;display:inline-flex;
+  align-items:center;justify-content:center;
+  transition:transform .08s;white-space:nowrap}
+.chip:active{transform:scale(.94)}
+.chip.on{background:var(--accent);border-color:var(--accent);font-weight:600}
+.chip small{display:block;font-size:10px;opacity:.55;font-weight:400;
+  margin-left:4px}
+.chip.on small{opacity:.9}
+
+/* 行为网格 */
+#actGrid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;
+  flex:1;min-width:0}
+.act{position:relative;background:var(--card2);border:1px solid var(--line);
+  border-radius:10px;color:var(--fg);padding:12px 6px;font-size:14px;
+  font-weight:500;text-align:center;min-height:52px;display:flex;
+  align-items:center;justify-content:center;user-select:none;cursor:pointer;
+  transition:transform .08s;word-break:break-word;line-height:1.15}
+.act:active{transform:scale(.93)}
+.act.on{background:var(--accent);border-color:var(--accent);font-weight:600}
+.act.custom{border-color:#4a3a6a;background:#1f1c2e}
+.act .code{position:absolute;top:2px;left:5px;font-size:9px;opacity:.4}
+.act .edit{position:absolute;top:2px;right:4px;font-size:11px;opacity:.5;
+  padding:2px 5px;border-radius:4px}
+.act .edit:active{background:var(--danger);opacity:1}
+.addAct{grid-column:1/-1;background:transparent;border:2px dashed var(--line);
+  border-radius:10px;color:var(--muted);padding:10px;font-size:13px;
+  min-height:44px;cursor:pointer;text-align:center}
+.addAct:active{border-color:var(--accent);color:var(--accent)}
+
+/* 备注 */
+textarea#note{width:100%;background:var(--card);border:1px solid var(--line);
+  color:var(--fg);border-radius:10px;padding:10px;font:inherit;
+  min-height:44px;resize:vertical}
+
+/* 底部 */
+.footer{position:fixed;left:0;right:0;bottom:0;display:flex;gap:8px;
+  padding:12px 10px calc(12px + env(safe-area-inset-bottom));
+  background:linear-gradient(transparent 0%,var(--bg) 45%);z-index:20}
+.btn{border:0;border-radius:14px;padding:14px 18px;font-size:16px;
+  font-weight:700;color:#fff;background:var(--accent);cursor:pointer;
+  transition:opacity .15s;line-height:1.2}
+.btn.ghost{background:var(--card);border:1px solid var(--line);color:var(--fg);
+  font-weight:500;padding:14px 14px;font-size:15px}
+.btn:disabled{opacity:.32}
+.btn:active:not(:disabled){transform:scale(.97)}
+.btn .sub{font-size:11px;font-weight:400;opacity:.75;display:block;
+  margin-top:3px;letter-spacing:.02em}
+
+#stats{background:var(--card);border-radius:12px;padding:10px 12px;
+  margin-top:12px;font-size:13px;color:var(--muted)}
+#stats .line{display:flex;justify-content:space-between;padding:2px 0;gap:8px}
+#stats .line b{color:var(--fg);text-align:right}
+
+/* toast */
+.toast{position:fixed;left:50%;top:64px;transform:translateX(-50%);
+  background:var(--ok);color:#000;font-weight:700;padding:8px 18px;
+  border-radius:20px;font-size:14px;opacity:0;transition:opacity .2s;
+  pointer-events:none;z-index:200}
+.toast.show{opacity:1}
+.toast.err{background:var(--danger);color:#fff}
+
+/* 弹窗 */
+#promptModal,#settingsPanel{display:none;position:fixed;inset:0;
+  background:rgba(0,0,0,.6);z-index:150;align-items:center;
+  justify-content:center;padding:20px}
+#settingsPanel{align-items:flex-end;padding:0}
+#promptModal.show,#settingsPanel.show{display:flex}
+.promptBox{background:var(--card);border-radius:16px;padding:20px;
+  width:100%;max-width:380px}
+.promptBox h3{margin:0 0 12px;font-size:16px;color:var(--fg);
+  text-transform:none;letter-spacing:0}
+.promptBox input{width:100%;background:var(--bg);border:1px solid var(--line);
+  color:var(--fg);border-radius:10px;padding:12px;font:inherit;font-size:16px}
+.promptBox .btns{display:flex;gap:8px;margin-top:14px}
+.promptBox .btns button{flex:1}
+
+.sheet{width:100%;background:var(--bg);
+  border-top-left-radius:20px;border-top-right-radius:20px;
+  padding:16px 12px calc(20px + env(safe-area-inset-bottom));
+  max-height:90vh;overflow-y:auto}
+.sheet h2{margin:0 0 12px;font-size:17px}
+.sheet h3{font-size:11px;letter-spacing:.1em;color:var(--muted);
+  margin:16px 0 6px;text-transform:uppercase;font-weight:600}
+.sheet input[type=text]{width:100%;background:var(--card);
+  border:1px solid var(--line);color:var(--fg);border-radius:10px;
+  padding:11px;font:inherit;margin-bottom:6px}
+.pt-row{display:flex;align-items:center;gap:8px;padding:8px 10px;
+  background:var(--card);border-radius:10px;margin-bottom:6px}
+.pt-row .code{color:var(--accent);font-weight:700;font-size:15px;
+  min-width:22px}
+.pt-row input{flex:1;background:var(--bg);border:1px solid var(--line);
+  color:var(--fg);border-radius:8px;padding:9px;font:inherit;font-size:15px;
+  margin:0}
+.pt-row .del{color:var(--danger);padding:4px 10px;cursor:pointer;font-size:16px}
+</style>
+</head>
+<body>
+
+<div class="bar">
+  <span class="pill" id="pSub">子区 <b>1</b></span>
+  <span class="pill" id="pClock">--:--</span>
+  <span class="pill">今日 <b id="pN">0</b> 人</span>
+  <span class="pill" id="btnSettings" style="margin-left:auto">⚙</span>
+  <span class="pill" id="btnExport">导出</span>
+</div>
+
+<!-- 群组信息 -->
+<div class="group-box">
+  <div class="group-head">
+    <span>群组 <span class="cnt" id="groupStatus">未开始</span></span>
+    <button class="mini-btn" id="btnNewGroup">新群组</button>
+  </div>
+  <div class="field-row"><label>地点</label><div class="row" id="gPoint"></div></div>
+  <div class="field-row"><label>人数</label><div class="row" id="gSize"></div></div>
+  <div class="field-row"><label>关系</label><div class="row" id="gRel"></div></div>
+</div>
+
+<!-- 当前人 -->
+<div class="person-box">
+  <div class="group-head" style="color:var(--muted)">
+    <span>当前人 <span class="cnt" id="personStatus" style="color:var(--fg)">—</span></span>
+  </div>
+  <div class="field-row"><label>性别</label><div class="row" id="gGender"></div></div>
+  <div class="field-row"><label>年龄</label><div class="row" id="gAge"></div></div>
+  <div class="field-row"><label>民族</label><div class="row" id="gEth"></div></div>
+  <div class="field-row" style="align-items:stretch">
+    <label>行为</label>
+    <div id="actGrid"></div>
+  </div>
+</div>
+
+<h3 style="font-size:11px;letter-spacing:.1em;color:var(--muted);
+  margin:12px 0 6px;text-transform:uppercase;font-weight:600">备注（可选）</h3>
+<textarea id="note" placeholder="特殊情况…"></textarea>
+
+<div id="stats"></div>
+
+<div class="footer">
+  <button class="btn ghost" id="btnUndo" style="flex:0 0 auto">↶ 撤销</button>
+  <button class="btn" id="btnAdd" style="flex:1" disabled>
+    添加此人
+    <span class="sub" id="addHint">还需填写：地点</span>
+  </button>
+</div>
+
+<!-- 设置面板 -->
+<div id="settingsPanel">
+  <div class="sheet">
+    <h2>设置</h2>
+    <h3>会话信息</h3>
+    <input type="text" id="inpObserver" placeholder="观察者">
+    <input type="text" id="inpWeather" placeholder="天气">
+    <input type="text" id="inpTemp" placeholder="温度">
+
+    <h3>地点管理（可编辑名称，或删除）</h3>
+    <div id="pointList"></div>
+    <button class="btn ghost" id="btnAddPoint"
+      style="width:100%;margin-top:6px;font-size:14px">＋ 新增地点</button>
+
+    <h3 style="margin-top:20px">危险操作</h3>
+    <button class="btn ghost" id="btnClear"
+      style="width:100%;color:var(--danger)">清空所有记录</button>
+
+    <button class="btn" id="settingsClose"
+      style="width:100%;margin-top:14px">关闭</button>
+  </div>
+</div>
+
+<!-- 输入弹窗 -->
+<div id="promptModal">
+  <div class="promptBox">
+    <h3 id="promptTitle">输入</h3>
+    <input id="promptInput" autocomplete="off">
+    <div class="btns">
+      <button class="btn ghost" id="promptCancel">取消</button>
+      <button class="btn" id="promptOk">确定</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* ============ 常量 ============ */
+const LS='bm_v4';
+
+const DEFAULT_ACTS=[
+  '坐','站','走/散步','拍照','聊天','玩手机','休息/无事','带小孩走',
+  '儿童自由玩','儿童玩设备','玩秋千','骑滑板车','骑婴儿三轮','轮滑','骑车',
+  '踢足球','打羽毛球','跳舞','跳绳','遛狗','轮椅','推婴儿车','扫地','其他'
+];
+// 默认 4 个地点，名字留空，用户自己到设置里填
+const DEFAULT_POINTS=[
+  {code:'A',name:''},
+  {code:'B',name:''},
+  {code:'C',name:''},
+  {code:'D',name:''}
+];
+
+const D={
+  size:[['1','1人'],['2','2人'],['3','3人'],['4+','3人以上']],
+  rel:[['K','认识'],['N','偶然交往'],['X','混合'],['U','看不出']],
+  gender:[['M','男'],['F','女'],['U','看不出']],
+  age:[['C','儿童'],['T','青少年'],['A','成人'],['S','老年'],['U','看不出']],
+  eth:[['H','汉族'],['S','少数民族'],['X','混合'],['U','看不出']]
+};
+
+/* ============ 状态 ============ */
+function loadState(){
+  try{
+    const raw=localStorage.getItem(LS);
+    if(raw){
+      const s=JSON.parse(raw);
+      s.curSub=s.curSub||1;
+      s.activities=s.activities||DEFAULT_ACTS.map((name,i)=>({code:i+1,name,custom:false}));
+      s.points=s.points||DEFAULT_POINTS.slice();
+      s.records=s.records||[];
+      s.meta=s.meta||{observer:'',weather:'',temp:''};
+      s.groupCounter=s.groupCounter||0;
+      return s;
+    }
+  }catch(e){}
+  return{
+    activities:DEFAULT_ACTS.map((name,i)=>({code:i+1,name,custom:false})),
+    points:DEFAULT_POINTS.slice(),
+    records:[],curSub:1,groupCounter:0,
+    meta:{observer:'',weather:'',temp:''}
+  };
+}
+let state=loadState();
+function saveState(){try{localStorage.setItem(LS,JSON.stringify(state));}catch(e){toast('保存失败',1);}}
+
+const $=s=>document.querySelector(s);
+const $$=s=>[...document.querySelectorAll(s)];
+const pad=n=>String(n).padStart(2,'0');
+const escHtml=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const actByCode=c=>state.activities.find(a=>a.code===c);
+const pointByCode=c=>state.points.find(p=>p.code===c);
+
+function toast(m,e){const t=$('#toast');t.textContent=m;t.classList.toggle('err',!!e);
+  t.classList.add('show');clearTimeout(t._tm);t._tm=setTimeout(()=>t.classList.remove('show'),1100);}
+
+/* ============ 当前编辑 ============ */
+let cur={
+  group:{id:null,point:'',size:'',rel:'',persons:0},
+  person:{gender:'',age:'',eth:'',act:null}
+};
+let personCounter=0; // 用于 person_index
+
+/* ============ 渲染 ============ */
+function fillChips(sel,items){
+  $(sel).innerHTML=items.map(([v,l])=>
+    `<div class="chip" data-v="${v}">${l}</div>`
+  ).join('');
+}
+fillChips('#gSize',D.size);
+fillChips('#gRel',D.rel);
+fillChips('#gGender',D.gender);
+fillChips('#gAge',D.age);
+fillChips('#gEth',D.eth);
+
+function renderPointChips(){
+  const el=$('#gPoint');
+  if(!state.points.length){
+    el.innerHTML='<div style="color:var(--muted);font-size:13px;padding:8px">请到 ⚙ 里添加地点</div>';
+    return;
+  }
+  el.innerHTML=state.points.map(p=>{
+    const label=p.name||p.code;
+    const sub=p.name?p.code:'';
+    return `<div class="chip" data-v="${p.code}">${escHtml(label)}${sub?`<small>${sub}</small>`:''}</div>`;
+  }).join('');
+}
+
+function renderActGrid(){
+  const g=$('#actGrid');g.innerHTML='';
+  state.activities.forEach(a=>{
+    const el=document.createElement('div');
+    el.className='act'+(a.custom?' custom':'');
+    el.dataset.code=a.code;
+    el.innerHTML=`<span class="code">${a.code}</span>${a.custom?'<span class="edit" data-edit="1">✕</span>':''}<span>${escHtml(a.name)}</span>`;
+    el.onclick=ev=>{
+      if(ev.target.dataset.edit){ev.stopPropagation();deleteActivity(a.code);return;}
+      cur.person.act=(cur.person.act===a.code)?null:a.code;
+      sync();
+    };
+    g.appendChild(el);
+  });
+  const add=document.createElement('div');
+  add.className='addAct';add.textContent='＋ 新增活动';
+  add.onclick=addActivity;g.appendChild(add);
+}
+
+/* ============ 通用 chip 点击 ============ */
+const GROUP_FIELDS=[['#gPoint','point'],['#gSize','size'],['#gRel','rel']];
+const PERSON_FIELDS=[['#gGender','gender'],['#gAge','age'],['#gEth','eth']];
+
+GROUP_FIELDS.forEach(([sel,k])=>{
+  document.addEventListener('click',e=>{
+    const t=e.target.closest(sel+' .chip');
+    if(!t)return;
+    const v=t.dataset.v;
+    cur.group[k]=(cur.group[k]===v)?null:v;
+    sync();
+  });
+});
+PERSON_FIELDS.forEach(([sel,k])=>{
+  document.addEventListener('click',e=>{
+    const t=e.target.closest(sel+' .chip');
+    if(!t)return;
+    const v=t.dataset.v;
+    cur.person[k]=(cur.person[k]===v)?null:v;
+    sync();
+  });
+});
+
+/* ============ 同步 UI ============ */
+function sync(){
+  GROUP_FIELDS.forEach(([sel,k])=>{
+    const v=cur.group[k]||null;
+    $$(sel+' .chip').forEach(c=>c.classList.toggle('on',c.dataset.v===v));
+  });
+  PERSON_FIELDS.forEach(([sel,k])=>{
+    const v=cur.person[k]||null;
+    $$(sel+' .chip').forEach(c=>c.classList.toggle('on',c.dataset.v===v));
+  });
+  $$('#actGrid .act').forEach(a=>{
+    a.classList.toggle('on',cur.person.act!=null&&Number(a.dataset.code)===cur.person.act);
+  });
+
+  // 群组状态
+  const gs=$('#groupStatus');
+  if(cur.group.id){
+    const need=cur.group.size;
+    const got=cur.group.persons;
+    const needLabel=need==='4+'?'3+':need;
+    let txt=`已记 ${got} 人`;
+    if(need && got>=(need==='4+'?3:Number(need))){
+      txt+=` ✓ 可新建`;
+    }else if(need){
+      txt+=` / ${needLabel}人`;
+    }
+    gs.textContent=txt;
+    gs.style.color=need&&got>=(need==='4+'?3:Number(need))?'#30d158':'#fff';
+  }else{
+    gs.textContent='未开始';
+    gs.style.color='#fff';
+  }
+
+  // 个人状态
+  const ps=$('#personStatus');
+  const filled=[cur.person.gender,cur.person.age,cur.person.eth,
+                cur.person.act!=null?'y':''].filter(Boolean).length;
+  ps.textContent=filled===4?'✓ 已填完':`${filled}/4`;
+
+  // 添加按钮
+  const missing=[];
+  if(!cur.group.point)missing.push('地点');
+  if(!cur.group.size)missing.push('人数');
+  if(!cur.group.rel)missing.push('关系');
+  if(!cur.person.gender)missing.push('性别');
+  if(!cur.person.age)missing.push('年龄');
+  if(!cur.person.eth)missing.push('民族');
+  if(cur.person.act==null)missing.push('行为');
+  const btn=$('#btnAdd');
+  if(missing.length===0){
+    btn.disabled=false;
+    $('#addHint').textContent='点此记录这个人';
+  }else{
+    btn.disabled=true;
+    $('#addHint').textContent='还需：'+missing.join('、');
+  }
+}
+
+/* ============ 添加此人 ============ */
+function nextGroupId(){
+  state.groupCounter=(state.groupCounter||0)+1;
+  return 'G'+String(state.groupCounter).padStart(4,'0');
+}
+
+$('#btnAdd').onclick=()=>{
+  const a=actByCode(cur.person.act);
+  if(!a)return;
+  // 首个人时生成群组 id
+  if(!cur.group.id){
+    cur.group.id=nextGroupId();
+    cur.group.persons=0;
+    personCounter=0;
+  }
+  const p=pointByCode(cur.group.point);
+  personCounter++;
+  state.records.push({
+    id:'R'+String(state.records.length+1).padStart(4,'0'),
+    ts:new Date().toISOString(),
+    sub:state.curSub,
+    group_id:cur.group.id,
+    point_code:cur.group.point,
+    point_name:p?(p.name||p.code):'',
+    group_size:cur.group.size,
+    relation:cur.group.rel,
+    person_index:personCounter,
+    gender:cur.person.gender,
+    age:cur.person.age,
+    ethnicity:cur.person.eth,
+    act_code:a.code,
+    act_name:a.name,
+    note:$('#note').value.trim(),
+    observer:state.meta.observer||'',
+    weather:state.meta.weather||'',
+    temp:state.meta.temp||''
+  });
+  cur.group.persons++;
+  // 清空个人字段（保留群组信息）
+  cur.person={gender:'',age:'',eth:'',act:null};
+  $('#note').value='';
+  saveState();
+  updateCounters();
+  if(navigator.vibrate)navigator.vibrate(30);
+  sync();
+  toast('已记 '+cur.group.persons+' 人（'+cur.group.id+'）');
+};
+
+/* ============ 新群组 ============ */
+$('#btnNewGroup').onclick=()=>{
+  const hadPerson=cur.group.persons>0;
+  // 保留地点（方便同地点连续观察），清空人数、关系、个人字段
+  cur.group={id:null,point:cur.group.point,size:'',rel:'',persons:0};
+  cur.person={gender:'',age:'',eth:'',act:null};
+  personCounter=0;
+  $('#note').value='';
+  sync();
+  if(hadPerson)toast('开始新群组');
+};
+
+/* ============ 撤销 ============ */
+$('#btnUndo').onclick=()=>{
+  if(!state.records.length){toast('无可撤销',1);return;}
+  const last=state.records.pop();
+  // 如果是当前群组的人
+  if(last.group_id===cur.group.id){
+    cur.group.persons=Math.max(0,cur.group.persons-1);
+    personCounter=Math.max(0,personCounter-1);
+    if(cur.group.persons===0){
+      cur.group.id=null;
+      personCounter=0;
+    }
+  }
+  saveState();updateCounters();sync();
+  toast('撤销：'+last.act_name);
+};
+
+/* ============ 活动增删 ============ */
+function addActivity(){
+  openPrompt('新增活动名称','',val=>{
+    const name=(val||'').trim();
+    if(!name){toast('名称不能为空',1);return;}
+    if(state.activities.some(a=>a.name===name)){toast('已存在同名',1);return;}
+    const max=state.activities.reduce((m,a)=>Math.max(m,a.code),0);
+    state.activities.push({code:max+1,name,custom:true});
+    saveState();renderActGrid();sync();toast('已新增：'+name);
+  });
+}
+function deleteActivity(code){
+  const a=actByCode(code);if(!a||!a.custom)return;
+  if(!confirm(`删除自定义活动「${a.name}」？历史数据不受影响。`))return;
+  state.activities=state.activities.filter(x=>x.code!==code);
+  saveState();renderActGrid();
+  if(cur.person.act===code)cur.person.act=null;
+  sync();toast('已删除');
+}
+
+/* ============ 顶栏 ============ */
+$('#pSub').onclick=()=>{
+  state.curSub=state.curSub>=6?1:state.curSub+1;
+  saveState();updateCounters();
+  toast('子区 '+state.curSub);
+};
+
+/* ============ 设置 ============ */
+$('#btnSettings').onclick=()=>{
+  $('#inpObserver').value=state.meta.observer||'';
+  $('#inpWeather').value=state.meta.weather||'';
+  $('#inpTemp').value=state.meta.temp||'';
+  renderPointList();
+  $('#settingsPanel').classList.add('show');
+};
+$('#settingsClose').onclick=()=>{
+  state.meta.observer=$('#inpObserver').value.trim();
+  state.meta.weather=$('#inpWeather').value.trim();
+  state.meta.temp=$('#inpTemp').value.trim();
+  saveState();
+  renderPointChips();
+  $('#settingsPanel').classList.remove('show');
+};
+
+function renderPointList(){
+  $('#pointList').innerHTML=state.points.map(p=>`
+    <div class="pt-row">
+      <span class="code">${p.code}</span>
+      <input type="text" data-code="${p.code}" value="${escHtml(p.name)}"
+        placeholder="地点名称（可空）">
+      <span class="del" data-del="${p.code}">✕</span>
+    </div>
+  `).join('')||'<div style="color:var(--muted);font-size:13px;padding:6px">暂无地点</div>';
+}
+$('#pointList').onchange=e=>{
+  const inp=e.target.closest('input[data-code]');
+  if(!inp)return;
+  const code=inp.dataset.code;
+  const p=state.points.find(x=>x.code===code);
+  if(p){p.name=inp.value.trim();saveState();renderPointChips();}
+};
+$('#pointList').onclick=e=>{
+  const d=e.target.dataset.del;if(!d)return;
+  if(!confirm('删除地点 '+d+'？'))return;
+  state.points=state.points.filter(p=>p.code!==d);
+  if(cur.group.point===d)cur.group.point='';
+  saveState();renderPointList();renderPointChips();sync();
+};
+$('#btnAddPoint').onclick=()=>{
+  openPrompt('地点代号（如 A / B / E）','',code=>{
+    code=(code||'').trim().toUpperCase();
+    if(!code)return;
+    if(state.points.some(p=>p.code===code)){toast('该代号已存在',1);return;}
+    state.points.push({code,name:''});
+    state.points.sort((a,b)=>a.code.localeCompare(b.code));
+    saveState();renderPointList();renderPointChips();sync();
+    toast('已加地点 '+code);
+  });
+};
+
+$('#btnClear').onclick=()=>{
+  if(!confirm('清空所有记录？不可恢复！'))return;
+  if(!confirm('再确认一次：真的要清空吗？'))return;
+  state.records=[];
+  state.groupCounter=0;
+  cur.group={id:null,point:'',size:'',rel:'',persons:0};
+  cur.person={gender:'',age:'',eth:'',act:null};
+  personCounter=0;
+  saveState();updateCounters();sync();toast('已清空');
+};
+
+/* ============ 导出 ============ */
+const esc=v=>'"'+String(v??'').replace(/"/g,'""')+'"';
+const WD=['日','一','二','三','四','五','六'];
+$('#btnExport').onclick=()=>{
+  if(!state.records.length){toast('还没有数据',1);return;}
+  const head=['id','datetime','date','time','weekday','sub',
+    'group_id','point_code','point_name','group_size','relation','person_index',
+    'gender','age','ethnicity','act_code','act_name',
+    'note','observer','weather','temp'];
+  const lines=[head.map(esc).join(',')];
+  state.records.forEach(r=>{
+    const d=new Date(r.ts);
+    lines.push([r.id,r.ts,
+      `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`,
+      `${pad(d.getHours())}:${pad(d.getMinutes())}`,WD[d.getDay()],
+      r.sub,r.group_id,r.point_code,r.point_name,r.group_size,r.relation,
+      r.person_index,r.gender,r.age,r.ethnicity,
+      r.act_code,r.act_name,r.note,r.observer,r.weather,r.temp
+    ].map(esc).join(','));
+  });
+  const blob=new Blob(['\uFEFF'+lines.join('\r\n')],{type:'text/csv;charset=utf-8'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);
+  const d=new Date();
+  a.download=`person_${d.getFullYear()}${pad(d.getMonth()+1)}${pad(d.getDate())}_${state.records.length}.csv`;
+  document.body.appendChild(a);a.click();document.body.removeChild(a);
+  setTimeout(()=>URL.revokeObjectURL(a.href),3000);
+  toast('已导出 '+state.records.length+' 条');
+};
+
+/* ============ 统计 ============ */
+function renderStats(){
+  const today=new Date().toISOString().slice(0,10);
+  const tr=state.records.filter(r=>r.ts.slice(0,10)===today);
+  const groups=new Set(tr.map(r=>r.group_id));
+  const byPt={},byAct={};
+  tr.forEach(r=>{
+    byPt[r.point_name||r.point_code]=(byPt[r.point_name||r.point_code]||0)+1;
+    byAct[r.act_name]=(byAct[r.act_name]||0)+1;
+  });
+  const topPt=Object.entries(byPt).sort((a,b)=>b[1]-a[1]).slice(0,4);
+  const topAct=Object.entries(byAct).sort((a,b)=>b[1]-a[1]).slice(0,4);
+  let h=`<div class="line"><span>今日 ${tr.length} 人 · ${groups.size} 群 · 总计 ${state.records.length} 人</span></div>`;
+  if(topPt.length)h+=`<div class="line"><span>热点位：</span><b>${topPt.map(([n,c])=>n+'×'+c).join(' · ')}</b></div>`;
+  if(topAct.length)h+=`<div class="line"><span>高频行为：</span><b>${topAct.map(([n,c])=>n+'×'+c).join(' · ')}</b></div>`;
+  $('#stats').innerHTML=h;
+}
+function updateCounters(){
+  $('#pSub').innerHTML=`子区 <b>${state.curSub}</b>`;
+  const today=new Date().toISOString().slice(0,10);
+  const todayCount=state.records.filter(r=>r.ts.slice(0,10)===today).length;
+  $('#pN').textContent=todayCount;
+  renderStats();
+}
+setInterval(()=>{const d=new Date();$('#pClock').textContent=`${pad(d.getHours())}:${pad(d.getMinutes())}`;},1000);
+
+/* ============ 输入弹窗 ============ */
+let promptCb=null;
+function openPrompt(title,def,cb){
+  $('#promptTitle').textContent=title;
+  $('#promptInput').value=def||'';
+  promptCb=cb;
+  $('#promptModal').classList.add('show');
+  setTimeout(()=>$('#promptInput').focus(),50);
+}
+$('#promptCancel').onclick=()=>{$('#promptModal').classList.remove('show');promptCb=null;};
+$('#promptOk').onclick=()=>{
+  const v=$('#promptInput').value;const cb=promptCb;
+  $('#promptModal').classList.remove('show');promptCb=null;
+  if(cb)cb(v);
+};
+$('#promptInput').addEventListener('keydown',e=>{
+  if(e.key==='Enter'){e.preventDefault();$('#promptOk').click();}
+});
+
+/* ============ 屏幕常亮 ============ */
+let wl=null;
+async function keepAwake(){try{wl=await navigator.wakeLock.request('screen');}catch(e){}}
+document.addEventListener('visibilitychange',()=>{
+  if(document.visibilityState==='visible')keepAwake();
+});
+keepAwake();
+
+/* ============ 启动 ============ */
+renderPointChips();
+renderActGrid();
+sync();
+updateCounters();
+</script>
+</body>
+</html>
