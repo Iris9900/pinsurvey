@@ -1,0 +1,609 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>公共空间使用问卷</title>
+<style>
+:root{--bg:#f5f5f7;--card:#fff;--line:#e5e5ea;--fg:#1c1c1e;--muted:#8e8e93;
+  --accent:#007aff;--ok:#34c759;--danger:#ff3b30;--warn:#ff9500}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;background:var(--bg);color:var(--fg);
+  font:16px/1.4 -apple-system,system-ui,"PingFang SC",sans-serif;
+  overscroll-behavior:none}
+body{padding:0 8px 110px}
+
+.bar{position:sticky;top:0;z-index:10;background:rgba(245,245,247,.97);
+  backdrop-filter:blur(10px);padding:6px 8px;display:flex;gap:6px;
+  align-items:center;flex-wrap:wrap;border-bottom:1px solid var(--line);
+  margin:0 -8px 6px}
+.pill{background:#fff;border:1px solid var(--line);border-radius:20px;
+  padding:5px 11px;font-size:13px;color:var(--muted);white-space:nowrap;cursor:pointer}
+.pill b{color:var(--fg)}
+.pill:active{background:#eee}
+.pill.point{background:#e8f0ff;border-color:#b3cfff;color:var(--accent);font-weight:600}
+.pill.tour{background:#fff4e5;border-color:#ffd699;color:var(--warn);font-weight:600}
+.pill.tour.off{background:#fff;border-color:var(--line);color:var(--muted);font-weight:400}
+
+.intro{background:#fff;border-radius:12px;padding:10px 14px;margin:6px 0;
+  font-size:13px;color:var(--muted);line-height:1.5;border:1px solid var(--line)}
+.intro h1{font-size:16px;color:var(--fg);margin:0 0 4px}
+
+.section{font-size:11px;font-weight:700;color:var(--accent);
+  letter-spacing:.08em;text-transform:uppercase;margin:14px 4px 6px}
+
+.q{background:#fff;border-radius:12px;padding:11px 12px;margin-bottom:7px;
+  border:1px solid var(--line);transition:border-color .2s}
+.q.answered{border-color:#c8e6c9}
+.q.miss{border-color:#ffcdd2}
+.q.hidden{display:none}
+.q-head{display:flex;align-items:flex-start;gap:8px;margin-bottom:8px}
+.q-num{flex:0 0 24px;height:24px;border-radius:50%;background:var(--accent);
+  color:#fff;font-size:12px;font-weight:700;display:flex;
+  align-items:center;justify-content:center;margin-top:1px}
+.q-title{flex:1;font-size:15px;font-weight:600;color:var(--fg);
+  line-height:1.3;margin:0}
+.q-sub{font-size:11px;color:var(--muted);font-weight:400;
+  display:block;margin-top:2px}
+
+.opts{display:grid;gap:6px}
+.opts.c1{grid-template-columns:1fr}
+.opts.c2{grid-template-columns:1fr 1fr}
+.opts.c3{grid-template-columns:1fr 1fr 1fr}
+.opts.c4{grid-template-columns:repeat(4,1fr)}
+.opts.c5{grid-template-columns:repeat(5,1fr)}
+
+.opt{background:#f7f7f9;border:1.5px solid transparent;color:var(--fg);
+  border-radius:10px;padding:10px 12px;font-size:15px;cursor:pointer;
+  user-select:none;display:flex;align-items:center;gap:8px;
+  transition:transform .08s,background .15s,border-color .15s;
+  line-height:1.25;min-width:0}
+.opt:active{transform:scale(.97)}
+.opt.on{background:#e8f0ff;border-color:var(--accent);font-weight:600;color:var(--accent)}
+.opt .mark{flex:0 0 18px;height:18px;border-radius:50%;
+  border:2px solid #c8c8cc;display:flex;align-items:center;
+  justify-content:center;transition:all .15s}
+.opt.on .mark{background:var(--accent);border-color:var(--accent)}
+.opt .mark::after{content:'';width:7px;height:7px;border-radius:50%;
+  background:#fff;opacity:0;transition:opacity .15s}
+.opt.on .mark::after{opacity:1}
+.opt.multi .mark{border-radius:4px}
+.opt.multi .mark::after{border-radius:2px;width:9px;height:9px}
+
+.opt.span2{grid-column:span 2}
+
+.q-sat .opts{grid-template-columns:repeat(5,1fr);gap:4px}
+.q-sat .opt{flex-direction:column;padding:8px 2px;text-align:center;
+  gap:3px;font-size:10px;color:var(--muted);border-radius:9px}
+.q-sat .opt .emoji{font-size:22px;line-height:1;filter:grayscale(1);opacity:.45}
+.q-sat .opt.on .emoji{filter:none;opacity:1}
+.q-sat .opt.on{color:var(--accent);font-weight:600}
+
+textarea{width:100%;background:#f7f7f9;border:1.5px solid transparent;
+  color:var(--fg);border-radius:10px;padding:11px;font:inherit;
+  resize:vertical;min-height:60px;line-height:1.4}
+textarea:focus{outline:none;border-color:var(--accent);background:#fff}
+
+.footer{position:fixed;left:0;right:0;bottom:0;display:flex;gap:8px;
+  padding:10px 8px calc(10px + env(safe-area-inset-bottom));
+  background:linear-gradient(transparent 0%,var(--bg) 40%);z-index:20}
+.btn{flex:1;border:0;border-radius:13px;padding:15px 18px;font-size:16px;
+  font-weight:700;color:#fff;background:var(--accent);cursor:pointer;
+  transition:opacity .15s;line-height:1.2}
+.btn:disabled{opacity:.32}
+.btn:active:not(:disabled){transform:scale(.97)}
+.btn.ghost{background:#fff;border:1px solid var(--line);color:var(--fg);
+  font-weight:500;flex:0 0 auto;padding:15px 14px;font-size:14px}
+.btn .sub{font-size:11px;font-weight:400;opacity:.85;display:block;margin-top:1px}
+
+.thanks{position:fixed;inset:0;background:rgba(255,255,255,.98);
+  z-index:200;display:none;flex-direction:column;align-items:center;
+  justify-content:center;padding:30px;text-align:center}
+.thanks.show{display:flex}
+.thanks .check{font-size:70px;color:var(--ok);margin-bottom:14px;
+  animation:pop .35s ease-out}
+@keyframes pop{0%{transform:scale(.4);opacity:0}100%{transform:scale(1);opacity:1}}
+.thanks h2{margin:0 0 8px;font-size:22px}
+.thanks p{margin:0;color:var(--muted);font-size:15px;max-width:340px;line-height:1.55}
+
+.toast{position:fixed;left:50%;top:60px;transform:translateX(-50%);
+  background:var(--ok);color:#fff;font-weight:600;padding:9px 18px;
+  border-radius:20px;font-size:14px;opacity:0;transition:opacity .2s;
+  pointer-events:none;z-index:300;box-shadow:0 4px 16px rgba(0,0,0,.15)}
+.toast.show{opacity:1}
+.toast.err{background:var(--danger)}
+
+#settingsPanel{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);
+  z-index:250;align-items:flex-end}
+#settingsPanel.show{display:flex}
+.sheet{width:100%;background:var(--bg);
+  border-top-left-radius:20px;border-top-right-radius:20px;
+  padding:16px 12px calc(18px + env(safe-area-inset-bottom));
+  max-height:90vh;overflow-y:auto}
+.sheet h2{margin:0 0 12px;font-size:18px}
+.sheet h3{font-size:11px;letter-spacing:.1em;color:var(--muted);
+  margin:14px 0 6px;text-transform:uppercase;font-weight:600}
+.pt-row{display:flex;align-items:center;gap:6px;padding:7px 9px;
+  background:#fff;border-radius:10px;margin-bottom:5px}
+.pt-row .code{color:var(--accent);font-weight:700;font-size:14px;min-width:20px}
+.pt-row input{flex:1;background:var(--bg);border:1px solid var(--line);
+  color:var(--fg);border-radius:8px;padding:8px;font:inherit;font-size:14px;
+  margin:0;min-width:0}
+.pt-row .del{color:var(--danger);padding:4px 8px;cursor:pointer;font-size:15px}
+.pt-row .tour-tag{font-size:10px;color:var(--warn);background:#fff4e5;
+  padding:3px 6px;border-radius:7px;cursor:pointer;white-space:nowrap}
+.pt-row .tour-tag.off{color:var(--muted);background:#f0f0f2}
+</style>
+</head>
+<body>
+
+<div class="bar">
+  <span class="pill point" id="pPoint">地点：A</span>
+  <span class="pill">已收 <b id="pN">0</b></span>
+  <span class="pill tour" id="pTour">旅游题：关</span>
+  <span class="pill" id="btnSettings" style="margin-left:auto">⚙</span>
+  <span class="pill" id="btnExport">导出</span>
+</div>
+
+<div class="intro">
+  <h1>公共空间使用问卷</h1>
+  <p style="margin:0">匿名填写，约2分钟，请根据实际情况勾选，谢谢！</p>
+</div>
+
+<div class="section">A · 基本情况</div>
+
+<div class="q" data-key="q1_gender" data-type="single">
+  <div class="q-head"><div class="q-num">A1</div><p class="q-title">性别</p></div>
+  <div class="opts c2">
+    <div class="opt" data-v="M"><span class="mark"></span>男</div>
+    <div class="opt" data-v="F"><span class="mark"></span>女</div>
+  </div>
+</div>
+
+<div class="q" data-key="q2_age" data-type="single">
+  <div class="q-head"><div class="q-num">A2</div><p class="q-title">年龄</p></div>
+  <div class="opts c3">
+    <div class="opt" data-v="1"><span class="mark"></span>18岁以下</div>
+    <div class="opt" data-v="2"><span class="mark"></span>18–30岁</div>
+    <div class="opt" data-v="3"><span class="mark"></span>30–45岁</div>
+    <div class="opt" data-v="4"><span class="mark"></span>45–60岁</div>
+    <div class="opt span2" data-v="5"><span class="mark"></span>60岁以上</div>
+  </div>
+</div>
+
+<div class="q" data-key="q3_ethnicity" data-type="single">
+  <div class="q-head"><div class="q-num">A3</div><p class="q-title">民族</p></div>
+  <div class="opts c2">
+    <div class="opt" data-v="uyghur"><span class="mark"></span>维吾尔族</div>
+    <div class="opt" data-v="han"><span class="mark"></span>汉族</div>
+    <div class="opt" data-v="kazakh"><span class="mark"></span>哈萨克族</div>
+    <div class="opt" data-v="hui"><span class="mark"></span>回族</div>
+    <div class="opt span2" data-v="other"><span class="mark"></span>其他</div>
+  </div>
+</div>
+
+<div class="q" data-key="q4_origin" data-type="single">
+  <div class="q-head"><div class="q-num">A4</div><p class="q-title">您来自</p></div>
+  <div class="opts c2">
+    <div class="opt" data-v="local"><span class="mark"></span>本市</div>
+    <div class="opt" data-v="pref"><span class="mark"></span>伊犁州其他县市</div>
+    <div class="opt" data-v="xj"><span class="mark"></span>疆内其他地州</div>
+    <div class="opt" data-v="out"><span class="mark"></span>疆外</div>
+  </div>
+</div>
+
+<div class="section">B · 今天的使用情况</div>
+
+<div class="q" data-key="q5_purpose" data-type="multi" data-max="3">
+  <div class="q-head"><div class="q-num">B1</div>
+    <p class="q-title">您今天来这里做什么？<span class="q-sub">最多选3项</span></p></div>
+  <div class="opts c2">
+    <div class="opt multi" data-v="walk"><span class="mark"></span>散步/休息</div>
+    <div class="opt multi" data-v="child"><span class="mark"></span>带孩子玩</div>
+    <div class="opt multi" data-v="photo"><span class="mark"></span>拍照/游览</div>
+    <div class="opt multi" data-v="shop"><span class="mark"></span>购物</div>
+    <div class="opt multi" data-v="eat"><span class="mark"></span>吃饭/喝东西</div>
+    <div class="opt multi" data-v="gather"><span class="mark"></span>和朋友家人聚会</div>
+    <div class="opt multi" data-v="dance"><span class="mark"></span>跳舞</div>
+    <div class="opt multi" data-v="sport"><span class="mark"></span>锻炼</div>
+    <div class="opt multi" data-v="pass"><span class="mark"></span>路过</div>
+    <div class="opt multi" data-v="biz"><span class="mark"></span>做生意/工作</div>
+    <div class="opt multi" data-v="event"><span class="mark"></span>参加活动</div>
+    <div class="opt multi" data-v="other"><span class="mark"></span>其他</div>
+  </div>
+</div>
+
+<div class="q" data-key="q6_freq" data-type="single">
+  <div class="q-head"><div class="q-num">B2</div><p class="q-title">您来这里的频率</p></div>
+  <div class="opts c2">
+    <div class="opt" data-v="daily"><span class="mark"></span>几乎每天</div>
+    <div class="opt" data-v="2-3w"><span class="mark"></span>每周2–3次</div>
+    <div class="opt" data-v="weekly"><span class="mark"></span>每周1次</div>
+    <div class="opt" data-v="monthly"><span class="mark"></span>每月几次</div>
+    <div class="opt" data-v="occ"><span class="mark"></span>偶尔来</div>
+    <div class="opt" data-v="first"><span class="mark"></span>第一次来</div>
+  </div>
+</div>
+
+<div class="q" data-key="q7_companion" data-type="single">
+  <div class="q-head"><div class="q-num">B3</div><p class="q-title">您今天和谁一起来？</p></div>
+  <div class="opts c2">
+    <div class="opt" data-v="alone"><span class="mark"></span>独自一人</div>
+    <div class="opt" data-v="family"><span class="mark"></span>家人</div>
+    <div class="opt" data-v="friends"><span class="mark"></span>朋友</div>
+    <div class="opt" data-v="neighbor"><span class="mark"></span>邻居</div>
+    <div class="opt" data-v="colleague"><span class="mark"></span>同事</div>
+    <div class="opt" data-v="other"><span class="mark"></span>其他</div>
+  </div>
+</div>
+
+<div class="section">C · 在这里的交往情况</div>
+
+<div class="q" data-key="q8_chat" data-type="single">
+  <div class="q-head"><div class="q-num">C1</div>
+    <p class="q-title">您在这里会和别人聊天吗？</p></div>
+  <div class="opts c4">
+    <div class="opt" data-v="often"><span class="mark"></span>经常</div>
+    <div class="opt" data-v="sometimes"><span class="mark"></span>偶尔</div>
+    <div class="opt" data-v="rarely"><span class="mark"></span>很少</div>
+    <div class="opt" data-v="never"><span class="mark"></span>从不</div>
+  </div>
+</div>
+
+<div class="q" data-key="q9_chat_ethnic" data-type="single">
+  <div class="q-head"><div class="q-num">C2</div>
+    <p class="q-title">聊天的人中有不同民族的吗？</p></div>
+  <div class="opts c3">
+    <div class="opt" data-v="yes"><span class="mark"></span>有</div>
+    <div class="opt" data-v="no"><span class="mark"></span>没有</div>
+    <div class="opt" data-v="unsure"><span class="mark"></span>不确定</div>
+  </div>
+</div>
+
+<div class="q" data-key="q10_chat_known" data-type="single">
+  <div class="q-head"><div class="q-num">C3</div>
+    <p class="q-title">您聊天的人是平时就认识的吗？</p></div>
+  <div class="opts c1">
+    <div class="opt" data-v="all-known"><span class="mark"></span>都是平时认识的</div>
+    <div class="opt" data-v="part-new"><span class="mark"></span>部分认识、部分新认识</div>
+    <div class="opt" data-v="all-new"><span class="mark"></span>都是这里新认识的</div>
+  </div>
+</div>
+
+<div class="section">D · 总体感受</div>
+
+<div class="q q-sat" data-key="q11_satisfaction" data-type="single">
+  <div class="q-head"><div class="q-num">D1</div>
+    <p class="q-title">您对这里的总体满意程度</p></div>
+  <div class="opts">
+    <div class="opt" data-v="1"><span class="emoji">😞</span>很不满意</div>
+    <div class="opt" data-v="2"><span class="emoji">😐</span>不太满意</div>
+    <div class="opt" data-v="3"><span class="emoji">🙂</span>一般</div>
+    <div class="opt" data-v="4"><span class="emoji">😊</span>比较满意</div>
+    <div class="opt" data-v="5"><span class="emoji">🤩</span>非常满意</div>
+  </div>
+</div>
+
+<div class="section" id="secE">E · 旅游影响</div>
+
+<div class="q" data-key="q12_visitors" data-type="single" data-tourism="1">
+  <div class="q-head"><div class="q-num">E1</div>
+    <p class="q-title">您觉得节假日这里游客多吗？</p></div>
+  <div class="opts c4">
+    <div class="opt" data-v="many"><span class="mark"></span>很多</div>
+    <div class="opt" data-v="some"><span class="mark"></span>比较多</div>
+    <div class="opt" data-v="mid"><span class="mark"></span>一般</div>
+    <div class="opt" data-v="few"><span class="mark"></span>不多</div>
+  </div>
+</div>
+
+<div class="q" data-key="q13_reduce" data-type="single" data-tourism="1">
+  <div class="q-head"><div class="q-num">E2</div>
+    <p class="q-title">游客多的时候，您会减少来这里吗？</p></div>
+  <div class="opts c3">
+    <div class="opt" data-v="yes"><span class="mark"></span>会</div>
+    <div class="opt" data-v="no"><span class="mark"></span>不会</div>
+    <div class="opt" data-v="unsure"><span class="mark"></span>说不清</div>
+  </div>
+</div>
+
+<div class="q" data-key="q14_whose" data-type="single" data-tourism="1">
+  <div class="q-head"><div class="q-num">E3</div>
+    <p class="q-title">在您看来，这个地方现在是给谁用的？</p></div>
+  <div class="opts c2">
+    <div class="opt" data-v="residents"><span class="mark"></span>主要是居民</div>
+    <div class="opt" data-v="visitors"><span class="mark"></span>主要是游客</div>
+    <div class="opt" data-v="both"><span class="mark"></span>两边差不多</div>
+    <div class="opt" data-v="unsure"><span class="mark"></span>说不清</div>
+  </div>
+</div>
+
+<div class="section">F · 建议（选填）</div>
+
+<div class="q" data-key="q15_suggestion" data-type="text">
+  <div class="q-head"><div class="q-num">F1</div>
+    <p class="q-title">您对这个空间有什么建议？</p></div>
+  <textarea id="q15text" placeholder="可以留空"></textarea>
+</div>
+
+<div class="footer">
+  <button class="btn ghost" id="btnReset" style="flex:0 0 auto">重置</button>
+  <button class="btn" id="btnSubmit" disabled>
+    提交
+    <span class="sub" id="hint">还有 N 题未答</span>
+  </button>
+</div>
+
+<div class="thanks" id="thanks">
+  <div class="check">✓</div>
+  <h2>感谢您的帮助！</h2>
+  <p>您的回答对我们非常有价值。</p>
+</div>
+
+<div id="settingsPanel">
+  <div class="sheet">
+    <h2>设置</h2>
+    <h3>地点管理</h3>
+    <p style="font-size:12px;color:var(--muted);margin:0 0 8px">
+      点"旅游题✓/✗"切换该地点是否问 E 部分。
+    </p>
+    <div id="pointList"></div>
+    <button class="btn ghost" id="btnAddPoint"
+      style="width:100%;margin-top:6px;font-size:14px">＋ 新增地点</button>
+    <h3 style="margin-top:20px">危险操作</h3>
+    <button class="btn ghost" id="btnClear"
+      style="width:100%;color:var(--danger)">清空所有已收问卷</button>
+    <button class="btn" id="settingsClose"
+      style="width:100%;margin-top:12px">关闭</button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const LS='survey_v4';
+const DEFAULT_POINTS=[
+  {code:'A',name:'六星街',tourism:true},
+  {code:'B',name:'地点B',tourism:false},
+  {code:'C',name:'地点C',tourism:false}
+];
+const BASE_REQUIRED=[
+  'q1_gender','q2_age','q3_ethnicity','q4_origin',
+  'q5_purpose','q6_freq','q7_companion',
+  'q8_chat','q9_chat_ethnic','q10_chat_known',
+  'q11_satisfaction'
+];
+
+function loadState(){
+  try{
+    const raw=localStorage.getItem(LS);
+    if(raw){
+      const s=JSON.parse(raw);
+      s.records=s.records||[];
+      s.points=s.points||DEFAULT_POINTS.slice();
+      s.curPoint=s.curPoint||s.points[0].code;
+      return s;
+    }
+  }catch(e){}
+  return{records:[],points:DEFAULT_POINTS.slice(),curPoint:'A'};
+}
+let state=loadState();
+function saveState(){try{localStorage.setItem(LS,JSON.stringify(state));}catch(e){toast('保存失败',1);}}
+
+const $=s=>document.querySelector(s);
+const $$=s=>[...document.querySelectorAll(s)];
+const pad=n=>String(n).padStart(2,'0');
+function toast(m,e){const t=$('#toast');t.textContent=m;t.classList.toggle('err',!!e);
+  t.classList.add('show');clearTimeout(t._tm);t._tm=setTimeout(()=>t.classList.remove('show'),1200);}
+
+let cur={};
+
+function getCurPoint(){return state.points.find(p=>p.code===state.curPoint)||state.points[0];}
+function isTourism(){return !!getCurPoint()?.tourism;}
+
+$$('.q').forEach(qEl=>{
+  const key=qEl.dataset.key,type=qEl.dataset.type,max=Number(qEl.dataset.max||0);
+  if(type==='single'){
+    qEl.querySelectorAll('.opt').forEach(opt=>{
+      opt.onclick=()=>{
+        qEl.querySelectorAll('.opt').forEach(o=>o.classList.remove('on'));
+        opt.classList.add('on');
+        cur[key]=opt.dataset.v;
+        qEl.classList.add('answered');qEl.classList.remove('miss');
+        sync();
+      };
+    });
+  }else if(type==='multi'){
+    qEl.querySelectorAll('.opt').forEach(opt=>{
+      opt.onclick=()=>{
+        const on=qEl.querySelectorAll('.opt.on');
+        if(opt.classList.contains('on'))opt.classList.remove('on');
+        else{
+          if(max&&on.length>=max){toast('最多选 '+max+' 项',1);return;}
+          opt.classList.add('on');
+        }
+        const vals=[...qEl.querySelectorAll('.opt.on')].map(o=>o.dataset.v);
+        cur[key]=vals.join(';');
+        qEl.classList.toggle('answered',vals.length>0);
+        qEl.classList.remove('miss');sync();
+      };
+    });
+  }
+});
+
+function updateVisibility(){
+  const isTour=isTourism();
+  document.querySelectorAll('.q[data-tourism="1"]').forEach(el=>{
+    el.classList.toggle('hidden',!isTour);
+  });
+  $('#secE').style.display=isTour?'':'none';
+  $('#pTour').textContent=isTour?'旅游题：开':'旅游题：关';
+  $('#pTour').classList.toggle('off',!isTour);
+}
+
+function requiredList(){
+  const list=[...BASE_REQUIRED];
+  if(isTourism())list.push('q12_visitors','q13_reduce','q14_whose');
+  return list;
+}
+
+function sync(){
+  const req=requiredList();
+  const miss=req.filter(k=>!cur[k]);
+  const btn=$('#btnSubmit');
+  btn.disabled=miss.length>0;
+  $('#hint').textContent=miss.length?`还有 ${miss.length} 题未答`:'点此提交';
+  $('#pN').textContent=state.records.length;
+}
+
+$('#btnSubmit').onclick=()=>{
+  const req=requiredList();
+  const miss=req.filter(k=>!cur[k]);
+  if(miss.length){
+    miss.forEach(k=>{
+      const el=document.querySelector(`.q[data-key="${k}"]`);
+      if(el){el.classList.add('miss');el.classList.remove('hidden');}
+    });
+    const first=document.querySelector(`.q.miss`);
+    if(first)first.scrollIntoView({behavior:'smooth',block:'center'});
+    return;
+  }
+  const now=new Date();
+  const p=getCurPoint();
+  state.records.push({
+    id:'S'+String(state.records.length+1).padStart(4,'0'),
+    datetime:now.toISOString(),
+    date:`${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())}`,
+    time:`${pad(now.getHours())}:${pad(now.getMinutes())}`,
+    point_code:p.code, point_name:p.name,
+    ...cur,
+    q15_suggestion:$('#q15text').value.trim()
+  });
+  saveState();
+  $('#thanks').classList.add('show');
+  if(navigator.vibrate)navigator.vibrate([30,60,30]);
+  setTimeout(()=>{$('#thanks').classList.remove('show');resetForm();},2600);
+};
+
+function resetForm(){
+  cur={};
+  $$('.q').forEach(q=>{
+    q.classList.remove('answered','miss');
+    q.querySelectorAll('.opt').forEach(o=>o.classList.remove('on'));
+  });
+  $('#q15text').value='';
+  updateVisibility();
+  window.scrollTo({top:0,behavior:'smooth'});
+  sync();
+}
+$('#btnReset').onclick=()=>{
+  if(Object.keys(cur).length && !confirm('清空当前这份问卷？'))return;
+  resetForm();toast('已重置');
+};
+
+$('#pPoint').onclick=()=>{
+  const codes=state.points.map(p=>p.code);
+  const i=codes.indexOf(state.curPoint);
+  state.curPoint=codes[(i+1)%codes.length];
+  saveState();updateVisibility();updateCounters();
+  toast('地点：'+getCurPoint().name);
+};
+$('#pTour').onclick=()=>{
+  const p=getCurPoint();if(!p)return;
+  p.tourism=!p.tourism;
+  saveState();updateVisibility();updateCounters();
+  toast('旅游题：'+(p.tourism?'开':'关'));
+};
+function updateCounters(){
+  const p=getCurPoint();
+  $('#pPoint').textContent='地点：'+(p?p.name:p.code);
+}
+
+$('#btnSettings').onclick=()=>{renderPointList();$('#settingsPanel').classList.add('show');};
+$('#settingsClose').onclick=()=>{$('#settingsPanel').classList.remove('show');};
+
+function renderPointList(){
+  $('#pointList').innerHTML=state.points.map(p=>`
+    <div class="pt-row" data-code="${p.code}">
+      <span class="code">${p.code}</span>
+      <input type="text" data-name="${p.code}" value="${p.name.replace(/"/g,'&quot;')}" placeholder="地点名称">
+      <span class="tour-tag ${p.tourism?'':'off'}" data-tour="${p.code}">
+        ${p.tourism?'旅游题✓':'旅游题✗'}
+      </span>
+      <span class="del" data-del="${p.code}">✕</span>
+    </div>
+  `).join('')||'<div style="color:var(--muted);font-size:13px;padding:6px">暂无地点</div>';
+}
+$('#pointList').onchange=e=>{
+  const inp=e.target.closest('input[data-name]');
+  if(!inp)return;
+  const code=inp.dataset.name;
+  const p=state.points.find(x=>x.code===code);
+  if(p){p.name=inp.value.trim()||code;saveState();updateCounters();}
+};
+$('#pointList').onclick=e=>{
+  const del=e.target.dataset.del;
+  if(del){
+    if(state.points.length<=1){toast('至少保留一个地点',1);return;}
+    if(!confirm('删除地点 '+del+'？'))return;
+    state.points=state.points.filter(p=>p.code!==del);
+    if(state.curPoint===del)state.curPoint=state.points[0].code;
+    saveState();renderPointList();updateCounters();updateVisibility();
+    return;
+  }
+  const tour=e.target.dataset.tour;
+  if(tour){
+    const p=state.points.find(x=>x.code===tour);
+    if(!p)return;
+    p.tourism=!p.tourism;
+    saveState();renderPointList();updateVisibility();updateCounters();
+  }
+};
+$('#btnAddPoint').onclick=()=>{
+  const name=prompt('新地点名称（如：人民公园）','');
+  if(!name||!name.trim())return;
+  const used=state.points.map(p=>p.code);
+  let code='A';
+  for(const c of 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'){
+    if(!used.includes(c)){code=c;break;}
+  }
+  state.points.push({code,name:name.trim(),tourism:false});
+  saveState();renderPointList();updateCounters();
+  toast('已加 '+code+' · '+name);
+};
+
+$('#btnClear').onclick=()=>{
+  if(!confirm('清空所有已收问卷？不可恢复！'))return;
+  if(!confirm('再确认一次：真的要清空吗？'))return;
+  state.records=[];saveState();sync();toast('已清空');
+};
+
+const esc=v=>'"'+String(v??'').replace(/"/g,'""')+'"';
+const HEAD=['id','datetime','date','time','point_code','point_name',
+  'q1_gender','q2_age','q3_ethnicity','q4_origin',
+  'q5_purpose','q6_freq','q7_companion',
+  'q8_chat','q9_chat_ethnic','q10_chat_known',
+  'q11_satisfaction',
+  'q12_visitors','q13_reduce','q14_whose',
+  'q15_suggestion'];
+
+$('#btnExport').onclick=()=>{
+  if(!state.records.length){toast('还没有数据',1);return;}
+  const lines=[HEAD.map(esc).join(',')];
+  state.records.forEach(r=>lines.push(HEAD.map(k=>esc(r[k]||'')).join(',')));
+  const blob=new Blob(['\uFEFF'+lines.join('\r\n')],{type:'text/csv;charset=utf-8'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);
+  const d=new Date();
+  a.download=`survey_${d.getFullYear()}${pad(d.getMonth()+1)}${pad(d.getDate())}_${state.records.length}.csv`;
+  document.body.appendChild(a);a.click();document.body.removeChild(a);
+  setTimeout(()=>URL.revokeObjectURL(a.href),3000);
+  toast('已导出 '+state.records.length+' 份');
+};
+
+updateVisibility();
+updateCounters();
+sync();
+</script>
+</body>
+</html>
